@@ -1,0 +1,312 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <math.h>
+
+#define VALUE 15
+#define MAXIMUM 21000
+#define BUFFSIZE 200
+#define TRAINING 75
+#define COLUMNS 30
+
+typedef struct Node {
+  int data;
+  char name[VALUE];
+  struct Node* next;
+} Node;
+
+Node* createNewNode(Node* head, char name[VALUE], int d) {
+  Node* temp = malloc(sizeof(Node));
+  if (temp == NULL) {
+    fprintf(stderr, "Unable to create node!\n");
+    exit(0);
+  }
+  strcpy(temp->name, name);
+  temp->data = d;
+  temp->next = NULL;
+
+  if (head == NULL) {
+    head = temp;
+  } else {
+    Node* ptr = head;
+    while (ptr->next) {
+      ptr = ptr->next;
+    }
+    ptr->next = temp;
+  }
+
+  return head;
+}
+
+int search(Node* head, char name[VALUE]) {
+
+  while (head) {
+    if (strcmp(head->name, name) == 0) {
+      return head->data;
+    } else {
+      head = head->next;
+    }
+  }
+  return 0;
+}
+
+// function to display the mapping of name and integer
+void display(Node *head) {
+
+  while (head) {
+    printf("%d -> %s\n", head->data, head->name);
+    head = head->next;
+  }
+}
+
+int** parse(int* total_attribute, int* total_no_of_data, int *max, char *file) {
+  int** dataset = malloc(MAXIMUM * sizeof(int*));
+  if (dataset == NULL) {
+    fprintf(stderr, "dataset[][] cannot be created\n");
+    exit(0);
+  }
+
+  int lpi, lpj;
+  for (lpi = 0; lpi < MAXIMUM; lpi++) {
+    dataset[lpi] = malloc(COLUMNS * sizeof(int));
+    if (dataset[lpi] == NULL) {
+      fprintf(stderr, "dataset[%d] cannnot be created!\n", lpi);
+      exit(0);
+    }
+  }
+
+  FILE* fp = fopen(file, "r");
+  if (fp == NULL) {
+    fprintf(stderr, "File does not exist!\n");
+    exit(0);
+  }
+
+  int lpk = 4;
+  lpi = 0;
+  Node* first = NULL;
+  char buff[BUFFSIZE];
+  const char s[2] = ",";
+  while(fgets(buff, BUFFSIZE, fp)) {
+    int lpj = 0;
+    char* tok = strtok(buff, s);
+    while (tok) {
+      int flag = search(first, tok);
+      if (flag) {
+        dataset[lpi][lpj++] = flag;
+      } else {
+	first = createNewNode(first, tok, lpk);
+        *max=lpk;
+	dataset[lpi][lpj++] = lpk++;
+      }
+      tok = strtok(NULL, s);
+    }
+    lpi++;
+    *total_attribute = lpj;
+  }
+  *total_no_of_data = lpi;
+  //display(first);
+  fclose(fp);
+  
+
+  return dataset;
+}
+
+int *generateRandom(int n) {
+  int* temp_arr = malloc((n - 1) * sizeof(int));
+  if (temp_arr == NULL) {
+    fprintf(stderr, "temp_arr cannot be created!\n");
+    exit(0);
+  }
+  srand(time(NULL));
+  temp_arr[0] = 0;
+
+  int lpi, lpl, lpj, flag;
+  for (lpi = 0; lpi < (n - 1); lpi++) {
+    flag = 0;	
+    lpl = rand() % (n - 1) + 1;
+    
+    for (lpj = 0; lpj < lpi; lpj++) {
+      if (temp_arr[lpj] == lpl) {
+        flag = 1; 
+        lpi--;
+	break;
+      } 
+    }
+    if (flag != 1) {
+      temp_arr[lpj] = lpl;
+    }
+  }
+  //for(lpi = 0; lpi < n - 1; lpi++) {
+   // printf("temp_arr[%d] = %d\n", lpi, temp_arr[lpi]);
+ // }
+  return temp_arr;
+}
+
+int **findClass(int **dataset, int training, int *random_number, int total_attribute, int *class_value, int max) {
+
+  int* array = malloc((max + 1) * sizeof(int));
+  if (array == NULL) {
+    fprintf(stderr, "array[] not created!\n");
+    exit(0);
+  }
+
+  int lpi;
+  for (lpi = 0; lpi < max + 1; lpi++) {
+    array[lpi] = 0;
+  }
+
+  int column = total_attribute;
+  for (lpi = 1; lpi < training; lpi++) {
+    array[dataset[random_number[lpi]][column - 1]]++;
+//    printf("\narray[%d][%d] =  %d", dataset[random_number[lpi]][column - 1], column - 1, array[dataset[random_number[lpi]][column - 1]]);
+  }
+
+  int count = 0;
+  for (lpi = 0; lpi < max + 1; lpi++) {
+    if (array[lpi]) {
+      count++;
+    }	
+  }
+//  printf("\ncount: %d\n", count);
+
+  int** class = malloc(2 * sizeof(int *));
+  if (class == NULL) {
+    fprintf(stderr, "class[][] not created!\n");
+    exit(0);
+  }
+
+  for (lpi = 0; lpi < 2; lpi++) {
+    class[lpi] = malloc(count * sizeof(int));
+    if (class[lpi] == NULL) {
+      fprintf(stderr, "class[%d] not created!\n", lpi);
+      exit(0);
+    }
+  }
+
+  int n = 0;
+  for (lpi = 4; lpi < max + 1; lpi++) {
+    if (array[lpi]) {
+      class[0][n]   = lpi;
+      class[1][n++] = array[lpi];
+    }
+  }
+  *class_value = count;
+
+  return class;
+
+}
+
+double compute_Probability(int **dataset, int testdata_attribute_value, int class_value, int *random_number, int training,
+      int test_attribute, int total_attribute, int class_occurence) {
+  int lpi;
+  double count = 0;
+  for (lpi = 1; lpi <= training; lpi++) {
+    if (dataset[random_number[lpi]][test_attribute] == testdata_attribute_value 
+        && dataset[random_number[lpi]][total_attribute - 1] == class_value) {
+      count++;
+    }
+  }
+  return count / class_occurence;
+}
+
+double compute_Class_Probability(int **dataset, int *random_number, int training, int total_attribute, int class_value) {
+  int lpi;
+  double count = 0;
+  for (lpi = 1; lpi <= training; lpi++) {
+    if (dataset[random_number[lpi]][total_attribute - 1] == class_value) {
+      count++;
+    }
+  }
+  return count / training;
+}
+
+int bayesian_Classifier(int **dataset, int test_data, int **class, int *random_number, int training, int total_attribute, int class_value) {
+  double class_with_probability[2] = {0,0};
+  int lpj, lpi;
+  for (lpj = 0; lpj < class_value; lpj++) {
+    double probability = 1;
+    for (lpi = 0; lpi < (total_attribute - 1); lpi++) {
+      probability *= compute_Probability(dataset, dataset[random_number[test_data]][lpi], 
+                     class[0][lpj], random_number, training, lpi, total_attribute, class[1][lpj]);
+    }
+    probability *= compute_Class_Probability(dataset, random_number, training, total_attribute, class[0][lpj]);
+    if (probability > class_with_probability[1]) {
+      class_with_probability[0] = class[0][lpj];
+      class_with_probability[1] = probability;
+    }
+  }
+  return round(class_with_probability[0]);
+}
+
+int main(int argc,char* argv[]){ 
+  int total_attribute, total_no_of_data, class_value,max;
+  int** dataset = parse(&total_attribute, &total_no_of_data,&max,argv[1]);
+  //printf("%d, %d",total_no_of_data,total_attribute);
+  int* random_number = generateRandom(total_no_of_data);
+  int training = total_no_of_data * TRAINING / 100;
+  int test = training + 1;
+  int** class = findClass(dataset, training, random_number, total_attribute, &class_value, max);
+  //printf("%d, %d",total_no_of_data,total_attribute);
+  int lpi, lpj;
+/*  for (lpi = 0; lpi < 2; lpi++) { 
+    for (lpj = 0; lpj < class_value; lpj++) {
+      printf("class[%d][%d] = %2d, ", lpi, lpj, class[lpi][lpj]);
+    }
+    printf("\n");
+  } 
+*/
+  double count = 0, error = 0, accuracy = 0;
+
+  for (lpi = test; lpi < total_no_of_data; count++, lpi++) {
+
+    int computedClass = bayesian_Classifier(dataset, lpi, class, random_number, training, total_attribute, class_value);
+    if (computedClass == dataset[random_number[lpi]][total_attribute - 1]) {
+    
+      accuracy++;
+
+    } else {
+
+      error++;
+    }
+  // printf("\n computed class: %d dataset class: %d",computedClass,dataset[random_number[lpi]][total_attribute - 1]);
+  }
+  (error =(error/count)*100);
+   
+  accuracy = (accuracy/count)*100;	
+  printf("\nError: %f\nAccuracy: %f\n", error, accuracy);
+
+ // printf("maximum value in the dataset is %d\n",max);
+
+
+      /*for(lpi=0;lpi<total_no_of_data;lpi++)
+	{
+		printf("\n");
+		for(lpj=0;lpj<total_attribute;lpj++)
+		{
+			printf("%d\t", dataset[lpi][lpj]);
+		}
+	}*/
+
+        
+      //  for(lpi=0;lpi<total_no_of_data;lpi++)
+      //printf("%d\n",random_number[lpi]);
+  //       printf("obj: %d  training: %d test:%d",obj,training,test);
+	/*printf("\nTraining Data\n");
+	for(lpi=0;lpi<training;lpi++)
+	{
+		printf("\n");
+		for(lpj=0;lpj<total_attribute;lpj++)
+		{
+			printf("%d\t", dataset[lpi][lpj]);
+		}
+	}
+        printf("\nTest Data");
+        for(lpi=test;lpi<total_no_of_data;lpi++){
+           printf("\n");
+           for(lpj=0;lpj<total_attribute;lpj++){
+                printf("%d\t",dataset[lpi][lpj]);
+        }   
+    } */   
+  return 0;
+}
