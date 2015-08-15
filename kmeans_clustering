@@ -1,0 +1,155 @@
+#include<stdio.h>
+#include<string.h>
+#include<math.h>
+#include<stdlib.h>
+#include<time.h>
+
+int obj,attr;
+
+struct node
+{
+	int data;
+	char name[15];
+	struct node *next;
+};
+
+struct node  *createnewnode(struct node *head,char name[15],int d)
+{
+	struct node *ptr=head,*temp;
+
+	temp=(struct node *)malloc(sizeof(struct node));
+	strcpy(temp->name,name);
+	temp->data=d;
+	temp->next=NULL;
+	if(head==NULL)
+		head=temp;
+
+	else
+	{
+		while(ptr->next!=NULL)
+		{
+			ptr=ptr->next;
+		}
+		ptr->next=temp;
+	}
+
+	return head;
+}
+
+void display(struct node *head)// function to display the mapping of name and integer
+{
+	struct node *temp=head;
+	
+	if(temp==NULL)
+		return;
+	while(temp!=NULL)
+	{
+		printf("%d->%s\n",temp->data,temp->name);
+		temp=temp->next;
+	}
+}
+
+int search(struct node *head,char name[15])
+{
+	struct node *temp=head;
+	while(temp!=NULL)
+	{
+		if(strcmp(temp->name,name)==0)
+			return temp->data;
+		else
+			temp=temp->next;
+	}
+
+	if(temp==NULL)
+		return 3;
+}
+
+int** parse()
+{
+        struct node *first;
+	first = NULL;
+	int i,j,k,t; 	    
+	int **a,x;
+	a=(int **)malloc(500*sizeof(int *));
+	for(i=0;i<500;i++){
+		a[i]=(int *)malloc(500*sizeof(int));
+	}
+	FILE *fp;
+	char *tok;    
+	const char s[2]=",";
+
+	char buff[200];
+
+	fp=fopen("golf.data","r");
+
+
+	k=4;i=0;
+
+	while(fgets(buff,200,fp)!=NULL)
+	{
+		j=0;
+		tok=strtok(buff,s);
+		while(tok != NULL)
+		{
+			t=search(first,tok);
+			if(t!=3)
+			{
+				a[i][j]=t;
+				j++;
+			}       
+			if(t==3)// this value is understood if it is checked in search method
+			{
+				first= createnewnode(first,tok,k);
+				a[i][j]=k;
+				j++;
+				k++;
+			}
+			tok=strtok(NULL,s);
+		}
+
+		i++;
+		attr=j;
+	}
+	obj=i;
+	display(first);
+ 	
+	
+        fclose(fp);
+
+         for(i=0;i<obj;i++)
+	{
+		printf("\n");
+		for(j=0;j<attr;j++)
+		{
+			printf("%d\t", a[i][j]);
+		}
+	}
+
+      return a;
+   
+}
+
+
+void assign_k_random(int **dataset,int k){
+
+    attr=attr+1;	
+    int i,seed=1;	
+    srand();	
+    for(i=0;i<obj;i++){
+    do{
+    dataset[i][attr]=(rand()%(k+1));
+     }while(dataset[i][attr]==0);
+    printf("%d\n",dataset[i][attr]);
+     }
+}
+
+
+void main()
+{  
+   int **dataset,i,j,k;
+   dataset=parse();   
+    
+   printf("\nEnter the value of K:\t");
+   scanf("%d",&k);
+   assign_k_random(dataset,k);			
+}
