@@ -1,0 +1,398 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<math.h>
+#include<time.h>
+
+#define USERS 944 
+#define MOVIES 1683
+#define BUFFSIZE 300
+#define GENRE 19
+#define MAX 800
+#define TRAINING 75
+#define TESTING 25
+
+struct userinfo
+{
+  int userid ;
+  int userwatchedmovies[MAX];
+  int movierating[MAX];
+  int moviecount;
+}uservar[USERS]; 
+
+struct movieinfo
+{
+  int movieid;
+  int genre[GENRE];
+}movievar[MOVIES];
+
+/*struct new_movie_info
+{
+ 
+    int new_movie_rating ;
+}new_movievar[MOVIES];*/
+
+struct new_movie_info
+{
+ 
+    int uid;
+    int movies[MOVIES];
+    int new_Rating[MOVIES];
+}user[USERS];
+
+
+double euclidean_distance( int j, int a , int i)
+   {   
+
+        int lpk;
+        double sum=0;
+       for(lpk=0;lpk<19;lpk++)
+       {
+          sum = sum + (movievar[j].genre[lpk]-movievar[(uservar[i].userwatchedmovies[a])].genre[lpk])*(movievar[j].genre[lpk]-movievar[(uservar  [i].userwatchedmovies[a])].genre[lpk]);
+
+         
+        }
+        //printf("%d,%d,%f\n",j,uservar[i].userwatchedmovies[a],sum);
+        double distance ;
+         distance = sqrt(sum);
+        //printf("distance is %f\n",distance);
+        return distance ;
+  }
+
+
+void sort( double topk[10] , int topk_movieratings[10] , int k)
+
+{
+      
+      double t ;
+      int d,c,m;
+
+     for (c = 1 ; c <= k - 1; c++) {
+    d = c;
+ 
+    while ( d > 0 && topk[d] > topk[d-1]) {
+      t          = topk[d];
+      topk[d]   = topk[d-1];
+      topk[d-1] = t;
+
+      t          = topk_movieratings[d];
+      topk_movieratings[d]   = topk_movieratings[d-1];
+      topk_movieratings[d-1] = t;
+ 
+ 
+      d--;
+    }
+  }
+   /*for(m=0;m<k;m++)
+   {
+   printf(",%f,",topk[m]);
+   printf("%d,",topk_movieratings[m]);
+   }*/
+}
+
+int assign_rating( int topk_movieratings[10] , int k)
+{
+   int frequency[6];
+   int i;
+  
+    for(i=0;i<6;i++)
+     {
+           frequency[i] = 0;
+    }
+
+    for(i=0;i<k;i++){
+	frequency[topk_movieratings[i]]++;
+    }
+
+    int max = 0;
+    int rating = 0;
+    
+   for(i=1;i<6;i++){
+	if( max < frequency[i] ){
+		max = frequency[i];
+		rating = i;	
+        } 
+   }   
+
+     //printf("\trating is %d ",rating );
+    
+    return rating;
+
+ } 
+
+
+ void sort_ratings(int user_id){
+
+	int n =  MOVIES,i,j,a;
+
+	for (i = 0; i < n; ++i)
+    {
+        for (j = i + 1; j < n; ++j)
+        {
+            
+            if( user[user_id].new_Rating[i] >= user[user_id].new_Rating[j] ){
+
+            	a = user[user_id].new_Rating[i];
+            	user[user_id].new_Rating[i] =  user[user_id].new_Rating[j];
+            	user[user_id].new_Rating[j] = a;
+
+
+            	a =  user[user_id].movies[i];
+            	user[user_id].movies[i] = user[user_id].movies[j];
+            	user[user_id].movies[j] = a;
+
+            }
+            
+        }
+    }
+}
+
+
+
+      
+
+
+
+void knn(int k) 
+        {
+              int notwatched[USERS][MOVIES];
+              int i,j,l;
+              //printf(" enter the k-value for the nearest neighbours \n");
+              //scanf("%d",&k);
+
+                srand(time(NULL));
+
+               for(i=1;i<USERS;i++)
+               for(j=1;j<MOVIES;j++)
+               notwatched[i][j]=0;
+
+               for(i=1;i<USERS;i++)
+               {
+                  l=(uservar[i].moviecount*TRAINING)/100;
+               for(j=1;j<l+1;j++)
+                {
+                 notwatched[i][uservar[i].userwatchedmovies[j]]=1;
+                }
+               }
+
+               
+
+            int lpi;   
+            for(lpi=0;lpi<50;lpi++){              
+               i= (rand()%(USERS-2))+ 1;
+
+                printf("User : %d\n",i);
+                l=(uservar[i].moviecount*TRAINING)/100;
+                 //printf("user is %d\n",i);
+
+                   int n;
+                 //for(n=1;n<l;n++)
+                 //printf("%d\t",uservar[i].userwatchedmovies[n]);
+                 //printf("\n");
+
+                 
+
+                int a,b,c;
+                double r,topk[k];
+                int topk_movieratings[k];
+                
+                  
+         
+                for(j=1;j<MOVIES;j++)
+                  {
+
+                                          for(c=0;c<k;c++)
+                                          {
+                                             topk[c]=999;
+                                          }
+
+                                          for(c=0;c<k;c++)
+                                         {
+                                           topk_movieratings[c]=0;
+                                          }
+
+ 
+
+                       if(notwatched[i][j]==0)
+                    {     //printf("%d\t",j);
+                          for(a=1; a<=l ; a++)
+                         {
+                            r= euclidean_distance(j,a,i);
+                             sort(topk , topk_movieratings, k);
+                                  if(topk[0]>r)
+                                  {
+                                    topk[0]=r;
+                                    topk_movieratings[0]=uservar[i].movierating[a] ;
+                                   }
+                              }
+
+                      // new_movievar[j].new_movie_rating = assign_rating(topk_movieratings,k);
+                      // printf("new movie rating is %d\n",new_movievar[j].new_movie_rating );      
+
+
+				user[i].uid = i;
+				user[i].new_Rating[j] = assign_rating(topk_movieratings,k);
+                          }                     
+
+                     // new_movievar[i].new_movie_rating = assign_rating(topk_movieratings,k);
+                     // create a new structure and assign new ratings generated
+                          
+                     }
+
+                     sort_ratings(i);
+
+                     
+
+          int last_index = 1682;
+					for(j=0;j<5;j++){
+						printf("Recommanded Movies : %d \n",user[i].movies[last_index]);
+						last_index--;
+					}
+
+
+          float precision = 0;
+
+          int test_count = uservar[i].moviecount - l;
+          int test_start_index = l+1;
+
+          for(j=0;j<5;j++){
+            for(k=0;k<test_count;k++){                 
+
+                if( user[i].movies[last_index]  == uservar[i].userwatchedmovies[test_start_index] ) {
+                      precision++;
+                }
+                test_start_index++;
+            }       
+            last_index--; 
+          }
+
+        /*  test_start_index = l;
+          for(j=0;j<test_count;j++){
+              printf("user Test Movies :%d \n",uservar[i].userwatchedmovies[test_start_index]);   
+              test_start_index++;
+          }*/
+
+          printf("PRE: %f \n",precision);
+
+        }
+}
+ 
+
+
+  
+void parsing()
+{
+  
+  char buff[BUFFSIZE];
+
+  const char a[2]="|";
+  const char b[2]="\t";
+
+  FILE  *fp1=fopen("u.data","r");
+
+    if(fp1==NULL)
+      {
+          fprintf(stderr, "FILE doesnt exist \n");
+          exit(1);
+      }
+ 
+    int i;
+
+   for(i=1;i<USERS;i++)
+    uservar[i].moviecount=0;
+
+  while(fgets(buff,BUFFSIZE,fp1)!=NULL)
+ {
+    int tokencount=0,x=0;
+    char* tok=strtok(buff,b);
+    while(tok)
+    {
+       int y;
+       tokencount++;
+       if(tokencount==1)
+        {
+            y=atoi(tok);
+            uservar[y].userid=y;
+            x=uservar[y].userid;
+            //printf("%d\t",x);
+            //userid[tok].userwatchedmovies[userid[tok].moviecount]
+         }
+        if(tokencount==2)
+        {
+            y=atoi(tok);
+            uservar[x].userwatchedmovies[uservar[x].moviecount]=y;
+            //printf("movie watched %d\t userid %d \t",  uservar[x].userwatchedmovies[uservar[x].moviecount],x);
+         }
+        if(tokencount==3)
+       {
+          y=atoi(tok);
+          uservar[x].movierating[uservar[x].moviecount]=y;
+          //printf("%d\n",uservar[x].movierating[uservar[x].moviecount]);
+          uservar[x].moviecount++;
+          //printf("moviecount %d\n",uservar[x].moviecount);
+       }
+      tok=strtok(NULL,b);
+    }
+  }
+   fclose(fp1);
+
+   FILE  *fp2=fopen("u.item","r");
+
+    if(fp2==NULL)
+      {
+          fprintf(stderr, "FILE doesnt exist \n");
+          exit(1);
+      }
+     
+     while(fgets(buff,BUFFSIZE,fp2)!=NULL)
+ {
+    int tokencount=0,y,x=0;
+    i=0;
+    char* tok=strtok(buff,a);
+    while(tok)
+    {
+      tokencount++;
+      //printf("%s$",tok);
+
+
+       if(tokencount==1)
+        {
+          y=atoi(tok);
+          movievar[y].movieid=y;
+          x=y;
+          //printf("%d|",y);
+         }
+      if(tokencount>4)
+        {
+           y=atoi(tok);
+           movievar[x].genre[i]=y;
+           //printf("%d|",y);
+           i++;
+        }
+      tok=strtok(NULL,a);
+ }
+  //:wqprintf("\n");
+  
+  
+}
+fclose(fp2);
+
+} 
+  
+  void main(int argc,char *argv[])
+  {
+    int i,j;
+    for(i=1;i<USERS;i++){
+	for(j=1;j<MOVIES;j++){
+		user[i].movies[j] = j;
+        }
+    }
+   	
+    
+     
+     parsing();           
+     knn(atoi(argv[1]));
+
+   }
+ 
+  
